@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rodrigo Chess // Cyber Edition</title>
+  
+  <!-- Dependências: Chessboard.js + Chess.js + jQuery + Google Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --panel-bg: rgba(17, 24, 39, 0.7);
+      --border-color: rgba(0, 243, 255, 0.2);
+      --accent-neon: #00f3ff;
+      --accent-glow: rgba(0, 243, 255, 0.4);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --btn-bg: #00f3ff;
+      --btn-hover: #00c2cc;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 243, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(120, 0, 255, 0.05) 0%, transparent 40%);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      color: var(--text-main);
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 30px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 243, 255, 0.05);
+      max-width: 950px;
+      width: 100%;
+    }
+
+    .board-container {
+      width: 450px;
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      margin-top: 0;
+      color: var(--text-main);
+      font-size: 22px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px var(--accent-glow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h1::before {
+      content: '';
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      background-color: var(--accent-neon);
+      box-shadow: 0 0 10px var(--accent-neon);
+      border-radius: 50%;
+    }
+
+    .panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .vs-card {
+      background: rgba(13, 17, 23, 0.8);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 15px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+    }
+
+    .vs-card .player {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .vs-card span:nth-child(2) {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--accent-neon);
+      font-size: 12px;
+    }
+
+    .difficulty-group {
+      margin: 20px 0;
+    }
+
+    .difficulty-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    select, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: rgba(13, 17, 23, 0.9);
+      color: var(--text-main);
+      font-size: 14px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    select:focus {
+      border-color: var(--accent-neon);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    button {
+      background: var(--btn-bg);
+      color: #0b0f19;
+      border: none;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 0 15px var(--accent-glow);
+    }
+
+    button:hover {
+      background: var(--btn-hover);
+      box-shadow: 0 0 25px var(--accent-neon);
+      transform: translateY(-1px);
+    }
+
+    #status {
+      padding: 12px;
+      background: rgba(13, 17, 23, 0.6);
+      border-left: 3px solid var(--accent-neon);
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: var(--text-main);
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    }
+
+    .history-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    #move-history {
+      max-height: 140px;
+      overflow-y: auto;
+      background: rgba(13, 17, 23, 0.8);
+      border: 1px solid var(--border-color);
+      padding: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--accent-neon);
+      border-radius: 8px;
+    }
+
+    /* Estilização da barra de rolagem */
+    #move-history::-webkit-scrollbar {
+      width: 6px;
+    }
+    #move-history::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    #move-history::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="board-container">
+    <h1>Rodrigo Chess</h1>
+    <div id="board" style="width: 100%"></div>
+  </div>
+
+  <div class="panel">
+    <div>
+      <div class="vs-card">
+        <span class="player">USER // BRANCAS</span>
+        <span>VS</span>
+        <span class="player" style="color: var(--accent-neon);">RODRIGO AI // PRETAS</span>
+      </div>
+
+      <div class="difficulty-group">
+        <label for="difficulty">Nível de Processamento:</label>
+        <select id="difficulty">
+          <option value="1">1. Iniciante (Movimentos Aleatórios)</option>
+          <option value="2">2. Amador (Capturas Imediatas)</option>
+          <option value="3" selected>3. Intermediário (Visão 2 jogadas)</option>
+          <option value="4">4. Avançado (Visão 3 jogadas)</option>
+          <option value="5">5. Mestre (Visão Profunda + Posicionamento)</option>
+        </select>
+        <button id="btn-newgame">INICIALIZAR NOVO JOGO</button>
+      </div>
+
+      <div id="status">Sua vez de jogar.</div>
+    </div>
+
+    <div>
+      <span class="history-label">Logs de Execução (Histórico):</span>
+      <div id="move-history"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let board = null;
+  const game = new Chess();
+  const $status = $('#status');
+  const $history = $('#move-history');
+
+  const pieceValues = {
+    p: 10,
+    n: 30,
+    b: 30,
+    r: 50,
+    q: 90,
+    k: 1000
+  };
+
+  function onDragStart(source, piece) {
+    if (game.game_over() || piece.search(/^b/) !== -1) return false;
+  }
+
+  function makeRodrigoMove() {
+    const level = parseInt($('#difficulty').val());
+    const moves = game.moves();
+
+    if (moves.length === 0) return;
+
+    let selectedMove = null;
+
+    if (level === 1) {
+      selectedMove = moves[Math.floor(Math.random() * moves.length)];
+    } else if (level === 2) {
+      const captureMoves = game.moves({ verbose: true }).filter(m => m.captured);
+      if (captureMoves.length > 0) {
+        selectedMove = captureMoves[Math.floor(Math.random() * captureMoves.length)].san;
+      } else {
+        selectedMove = moves[Math.floor(Math.random() * moves.length)];
+      }
+    } else {
+      const depth = level === 3 ? 2 : (level === 4 ? 3 : 4);
+      selectedMove = getBestMove(game, depth, level === 5);
+    }
+
+    game.move(selectedMove);
+    board.position(game.fen());
+    updateStatus();
+  }
+
+  function getBestMove(game, depth, usePositionalBonus) {
+    let bestMove = null;
+    let bestValue = -Infinity;
+    const moves = game.moves({ verbose: true });
+
+    for (let move of moves) {
+      game.move(move);
+      let boardValue = minimax(game, depth - 1, -10000, 10000, false, usePositionalBonus);
+      game.undo();
+
+      if (boardValue > bestValue) {
+        bestValue = boardValue;
+        bestMove = move.san;
+      }
+    }
+    return bestMove || moves[0].san;
+  }
+
+  function minimax(game, depth, alpha, beta, isMaximizing, usePositionalBonus) {
+    if (depth === 0 || game.game_over()) {
+      return evaluateBoard(game, usePositionalBonus);
+    }
+
+    const moves = game.moves();
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      for (let move of moves) {
+        game.move(move);
+        let eval = minimax(game, depth - 1, alpha, beta, false, usePositionalBonus);
+        game.undo();
+        maxEval = Math.max(maxEval, eval);
+        alpha = Math.max(alpha, eval);
+        if (beta <= alpha) break;
+      }
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      for (let move of moves) {
+        game.move(move);
+        let eval = minimax(game, depth - 1, alpha, beta, true, usePositionalBonus);
+        game.undo();
+        minEval = Math.min(minEval, eval);
+        beta = Math.min(beta, eval);
+        if (beta <= alpha) break;
+      }
+      return minEval;
+    }
+  }
+
+  function evaluateBoard(game, usePositionalBonus) {
+    let totalEvaluation = 0;
+    const boardState = game.board();
+
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = boardState[r][c];
+        if (piece) {
+          let val = pieceValues[piece.type];
+          
+          if (usePositionalBonus && (r >= 3 && r <= 4 && c >= 3 && c <= 4)) {
+            val += 2;
+          }
+
+          if (piece.color === 'b') {
+            totalEvaluation += val;
+          } else {
+            totalEvaluation -= val;
+          }
+        }
+      }
+    }
+    return totalEvaluation;
+  }
+
+  function onDrop(source, target) {
+    const move = game.move({
+      from: source,
+      to: target,
+      promotion: 'q'
+    });
+
+    if (move === null) return 'snapback';
+
+    updateStatus();
+    window.setTimeout(makeRodrigoMove, 300);
+  }
+
+  function onSnapEnd() {
+    board.position(game.fen());
+  }
+
+  function updateStatus() {
+    let statusText = '';
+
+    if (game.in_checkmate()) {
+      statusText = game.turn() === 'w' ? 'STATUS: Xeque-mate! Rodrigo AI venceu.' : 'STATUS: Xeque-mate! Você venceu!';
+    } else if (game.in_draw()) {
+      statusText = 'STATUS: Fim de jogo // Empate.';
+    } else {
+      statusText = game.turn() === 'w' ? 'Sua vez de executar jogada.' : 'Rodrigo AI está processando jogada...';
+      if (game.in_check()) {
+        statusText += ' [ALERTA: EM XEQUE!]';
+      }
+    }
+
+    $status.html(statusText);
+
+    const history = game.history();
+    let historyHTML = '';
+    for (let i = 0; i < history.length; i += 2) {
+      historyHTML += `<div>[${(i/2)+1}] ${history[i]} ${history[i+1] || ''}</div>`;
+    }
+    $history.html(historyHTML);
+    $history.scrollTop($history[0].scrollHeight);
+  }
+
+  const config = {
+    draggable: true,
+    position: 'start',
+    onDragStart: onDragStart,
+    onDrop: onDrop,
+    onSnapEnd: onSnapEnd,
+    pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
+  };
+
+  board = Chessboard('board', config);
+
+  $('#btn-newgame').on('click', () => {
+    game.reset();
+    board.position('start');
+    updateStatus();
+  });
+</script>
+
+</body>
+</html>
