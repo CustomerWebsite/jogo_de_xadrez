@@ -64,6 +64,12 @@
       align-items: center;
     }
 
+    /* Peças mais robustas e destacadas */
+    .piece-417db {
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8)) contrast(1.15);
+      transform: scale(1.05);
+    }
+
     h1 {
       font-family: 'Orbitron', sans-serif;
       margin: 0 0 10px 0;
@@ -117,7 +123,11 @@
       font-size: 11px;
     }
 
-    .difficulty-group label {
+    .input-group, .difficulty-group {
+      margin-top: 10px;
+    }
+
+    .difficulty-group label, .input-group label {
       display: block;
       font-size: 11px;
       font-weight: 500;
@@ -127,7 +137,7 @@
       letter-spacing: 1px;
     }
 
-    select, button {
+    input[type="text"], select, button {
       width: 100%;
       padding: 12px;
       border-radius: 8px;
@@ -140,7 +150,7 @@
       box-sizing: border-box;
     }
 
-    select:focus {
+    input[type="text"]:focus, select:focus {
       border-color: var(--accent-neon);
       box-shadow: 0 0 10px var(--accent-glow);
     }
@@ -155,10 +165,22 @@
       letter-spacing: 1px;
       cursor: pointer;
       box-shadow: 0 0 15px var(--accent-glow);
+      transition: background 0.2s;
     }
 
     button:active {
       background: var(--btn-hover);
+    }
+
+    .btn-secondary {
+      background: rgba(13, 17, 23, 0.9);
+      color: var(--accent-neon);
+      border: 1px solid var(--border-color);
+      box-shadow: none;
+    }
+
+    .btn-secondary:active {
+      background: rgba(0, 243, 255, 0.1);
     }
 
     #status {
@@ -194,7 +216,12 @@
       box-sizing: border-box;
     }
 
-    /* Ajuste para telas maiores (Desktop/Tablet) */
+    /* Estilo para casas destacadas */
+    .highlight {
+      box-shadow: inset 0 0 4px 4px var(--accent-neon);
+      background-color: rgba(0, 243, 255, 0.15) !important;
+    }
+
     @media (min-width: 768px) {
       body {
         padding: 20px;
@@ -218,10 +245,10 @@
       .vs-card .player {
         font-size: 14px;
       }
-      .difficulty-group label {
+      .difficulty-group label, .input-group label {
         font-size: 13px;
       }
-      select, button {
+      input[type="text"], select, button {
         font-size: 14px;
       }
       #status {
@@ -245,12 +272,23 @@
   <div class="panel">
     <div>
       <div class="vs-card">
-        <span class="player">USER // BRANCAS</span>
+        <span class="player" id="player-label">USER // BRANCAS</span>
         <span>VS</span>
         <span class="player" style="color: var(--accent-neon);">RODRIGO AI</span>
       </div>
 
-      <div class="difficulty-group" style="margin-top: 15px;">
+      <div class="input-group">
+        <label for="player-name">Nome do Jogador:</label>
+        <input type="text" id="player-name" value="Player" placeholder="Digite seu nome...">
+      </div>
+
+      <div class="difficulty-group">
+        <label for="player-color">Sua Cor:</label>
+        <select id="player-color">
+          <option value="w" selected>Brancas (Começa jogando)</option>
+          <option value="b">Pretas (IA começa jogando)</option>
+        </select>
+
         <label for="difficulty">Nível de Processamento:</label>
         <select id="difficulty">
           <option value="1">1. Iniciante (Movimentos Aleatórios)</option>
@@ -259,6 +297,8 @@
           <option value="4">4. Avançado (Visão 3 jogadas)</option>
           <option value="5">5. Mestre (Visão Profunda + Posicionamento)</option>
         </select>
+
+        <button id="btn-undo" class="btn-secondary">VOLTAR JOGADA</button>
         <button id="btn-newgame">INICIALIZAR NOVO JOGO</button>
       </div>
 
@@ -278,6 +318,9 @@
   const $status = $('#status');
   const $history = $('#move-history');
 
+  let selectedSquare = null;
+  let possibleMoves = [];
+
   const pieceValues = {
     p: 10,
     n: 30,
@@ -287,11 +330,91 @@
     k: 1000
   };
 
-  function onDragStart(source, piece) {
-    if (game.game_over() || piece.search(/^b/) !== -1) return false;
+  $('#player-name').on('input', function() {
+    updatePlayerLabel();
+  });
+
+  $('#player-color').on('change', function() {
+    startNewGame();
+  });
+
+  function updatePlayerLabel() {
+    const name = $('#player-name').val().trim() || 'PLAYER';
+    const colorText = $('#player-color').val() === 'w' ? 'BRANCAS' : 'PRETAS';
+    $('#player-label').text(`${name.toUpperCase()} // ${colorText}`);
+  }
+
+  function removeHighlights() {
+    $('#board .square-55d63').removeClass('highlight');
+  }
+
+  function highlightSquares(squares) {
+    removeHighlights();
+    for (let i = 0; i < squares.length; i++) {
+      $('#board .square-' + squares[i]).addClass('highlight');
+    }
+  }
+
+  // Lógica de clique para selecionar e mover peças
+  function onSquareClick(square) {
+    if (game.game_over()) return;
+
+    const userColor = $('#player-color').val();
+    if (game.turn() !== userColor) return; // Não é a vez do jogador
+
+    const piece = game.get(square);
+
+    if (!selectedSquare) {
+      // Se nenhuma peça está selecionada, tenta selecionar uma do usuário
+      if (piece && piece.color === userColor) {
+        selectedSquare = square;
+        possibleMoves = game.moves({ square: square, verbose: true });
+        
+        if (possibleMoves.length === 0) {
+          selectedSquare = null;
+          return;
+        }
+
+        const squaresToHighlight = possibleMoves.map(m => m.to);
+        squaresToHighlight.push(square);
+        highlightSquares(squaresToHighlight);
+      }
+    } else {
+      // Já existe uma peça selecionada, verifica se o clique foi em um destino válido
+      const match = possibleMoves.find(m => m.to === square);
+      
+      if (match) {
+        const move = game.move({
+          from: selectedSquare,
+          to: square,
+          promotion: 'q'
+        });
+
+        if (move) {
+          board.position(game.fen());
+          removeHighlights();
+          selectedSquare = null;
+          updateStatus();
+          
+          if (!game.game_over()) {
+            window.setTimeout(makeRodrigoMove, 300);
+          }
+          return;
+        }
+      }
+
+      // Se clicar na própria peça, troca a seleção ou desseleciona
+      removeHighlights();
+      selectedSquare = null;
+      if (piece && piece.color === userColor) {
+        onSquareClick(square);
+      }
+    }
   }
 
   function makeRodrigoMove() {
+    if (game.game_over()) return;
+
     const level = parseInt($('#difficulty').val());
     const moves = game.moves();
 
@@ -393,32 +516,17 @@
     return totalEvaluation;
   }
 
-  function onDrop(source, target) {
-    const move = game.move({
-      from: source,
-      to: target,
-      promotion: 'q'
-    });
-
-    if (move === null) return 'snapback';
-
-    updateStatus();
-    window.setTimeout(makeRodrigoMove, 300);
-  }
-
-  function onSnapEnd() {
-    board.position(game.fen());
-  }
-
   function updateStatus() {
     let statusText = '';
+    const playerName = $('#player-name').val().trim() || 'Player';
+    const userColor = $('#player-color').val();
 
     if (game.in_checkmate()) {
-      statusText = game.turn() === 'w' ? 'STATUS: Xeque-mate! Rodrigo AI venceu.' : 'STATUS: Xeque-mate! Você venceu!';
+      statusText = game.turn() === userColor ? 'STATUS: Xeque-mate! Rodrigo AI venceu.' : `STATUS: Xeque-mate! ${playerName} venceu!`;
     } else if (game.in_draw()) {
       statusText = 'STATUS: Fim de jogo // Empate.';
     } else {
-      statusText = game.turn() === 'w' ? 'Sua vez de executar jogada.' : 'Rodrigo AI está processando...';
+      statusText = game.turn() === userColor ? `Sua vez (${playerName}).` : 'Rodrigo AI está processando...';
       if (game.in_check()) {
         statusText += ' [ALERTA: EM XEQUE!]';
       }
@@ -435,27 +543,60 @@
     $history.scrollTop($history[0].scrollHeight);
   }
 
+  function startNewGame() {
+    game.reset();
+    board.position('start');
+    
+    const userColor = $('#player-color').val();
+    board.orientation(userColor === 'w' ? 'white' : 'black');
+
+    removeHighlights();
+    selectedSquare = null;
+    updatePlayerLabel();
+    updateStatus();
+
+    // Se o usuário escolheu ser Preto, a IA (Brancas) faz a primeira jogada
+    if (userColor === 'b') {
+      window.setTimeout(makeRodrigoMove, 300);
+    }
+  }
+
   const config = {
-    draggable: true,
+    draggable: false, // Desativado o arrastar para focar totalmente em cliques/toques
     position: 'start',
-    onDragStart: onDragStart,
-    onDrop: onDrop,
-    onSnapEnd: onSnapEnd,
     pieceTheme: 'https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png'
   };
 
   board = Chessboard('board', config);
 
-  // Recalcula o tamanho do tabuleiro caso a tela mude de orientação
+  // Evento de clique nas casas do tabuleiro
+  $('#board').on('click', '.square-55d63', function() {
+    const square = $(this).data('square');
+    onSquareClick(square);
+  });
+
   $(window).resize(function() {
     board.resize();
   });
 
   $('#btn-newgame').on('click', () => {
-    game.reset();
-    board.position('start');
-    updateStatus();
+    startNewGame();
   });
+
+  // Botão Voltar Jogada (desfaz 2 lances para manter a vez do usuário)
+  $('#btn-undo').on('click', () => {
+    if (game.history().length >= 2) {
+      game.undo();
+      game.undo();
+      board.position(game.fen());
+      removeHighlights();
+      selectedSquare = null;
+      updateStatus();
+    }
+  });
+
+  // Inicialização padrão
+  updatePlayerLabel();
 </script>
 
 </body>
